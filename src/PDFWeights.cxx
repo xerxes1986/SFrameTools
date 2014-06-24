@@ -10,14 +10,14 @@ PDFWeights::PDFWeights(E_SystShift syst_shift, TString pdfname, TString pdfweigh
       return;
     }
     m_libvalid=true;
-  
+
     LHAPDF::initPDFSet(1, (string)(pdfname+".LHgrid"));
     m_N_unc = LHAPDF::numberPDF();
     cout << "got pdfset number " << m_N_unc << endl;
     m_normalize_to_total_sum=false;
     if(pdfweightdir!=""){
       m_normalize_to_total_sum=true;
-      
+
       TString filename = pdfweightdir;
       filename +="_";
       filename += pdfname;
@@ -26,7 +26,7 @@ PDFWeights::PDFWeights(E_SystShift syst_shift, TString pdfname, TString pdfweigh
       m_logger << INFO << "Do pdf re-weighting with respect to weights in file: " << filename << SLogger::endmsg;
 
       ifstream infile (((string)filename).c_str());
-      
+
       infile>>m_N_tot;
 
       do{
@@ -56,22 +56,22 @@ std::vector<double> PDFWeights::GetWeightList(){
   if(!m_libvalid) return pdf_weights;
 
   //pdf weighting code taken from https://twiki.cern.ch/twiki/bin/view/CMS/TWikiTopRefSyst#PDF_uncertainties
- 
+
   EventCalc* calc = EventCalc::Instance();
 
 
   double x1=calc->GetGenInfo()->pdf_x1();
   double x2=calc->GetGenInfo()->pdf_x2();
- 
+
   int id1 = calc->GetGenInfo()->pdf_id1();
   int id2 = calc->GetGenInfo()->pdf_id2();
- 
+
   double q = calc->GetGenInfo()->pdf_scalePDF();
 
   LHAPDF::usePDFMember(1,0);
   double xpdf1 = LHAPDF::xfx(1, x1, q, id1);
   double xpdf2 = LHAPDF::xfx(1, x2, q, id2);
- 
+
   double w0 = xpdf1 * xpdf2;
   for(unsigned int i=1; i <=m_N_unc; ++i){
     LHAPDF::usePDFMember(1,i);
@@ -81,15 +81,15 @@ std::vector<double> PDFWeights::GetWeightList(){
 
     if(m_normalize_to_total_sum){
       pdf_weights.push_back(weight/m_sumofweights[i-1]*m_N_tot);
-      
+
     }
-    else{ 
+    else{
       pdf_weights.push_back(weight);
     }
   }
 
   return pdf_weights;
-  
+
 }
 
 
@@ -107,3 +107,23 @@ double PDFWeights::GetWeight(unsigned int index){
   return pdf_weights.at(index-1);
 
 }
+
+double PDFWeights::GetWeight()
+{
+    if(!m_libvalid) return 1.;
+
+    double pm = 1.0;
+    if(m_syst_shift == e_Down)
+        pm = -1.0;
+
+    std::vector<double> pdf_weights = GetWeightList();
+    double weight = 0.0;
+    for(unsigned int i=0; i < pdf_weights.size(); i += 2) {
+        double var1 = pdf_weights[i] - 1.0;
+        double var2 = pdf_weights[i+1] - 1.0;
+        weight += std::pow(std::max(std::max(var1*pm,var2*pm),0.),2.);
+    }
+    weight = 1.0 + pm * std::sqrt(weight);
+    return weight;
+}
+

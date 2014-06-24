@@ -20,13 +20,15 @@ public:
   ~PDFWeights() {};
 
   ///returns quadratically summed pdf uncertainties
+  double GetWeight();
+  ///returns index weight (for backwards compatibility)
   double GetWeight(unsigned int index);
 
   ///returns list of pdf uncertainties from eigenvectors
   std::vector<double> GetWeightList();
 
   unsigned int GetNWeights(){return m_N_unc;}
-  
+
 private:
 
   mutable SLogger m_logger;
@@ -39,7 +41,7 @@ private:
   bool m_normalize_to_total_sum;
   std::vector<double> m_sumofweights;
   int m_N_tot;
-  
+
 
 };
 
